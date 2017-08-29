@@ -39,7 +39,9 @@ DELIMITER_MAP = {
 
 class DMFParser:
     """Parser of BYOND interface .dmf format to json."""
-    def __init__(self):
+    def __init__(self, input_filename, output_filename='byond.json'):
+        self.input_filename = input_filename
+        self.output_filename = output_filename
         self.macrolists = []
         self.menubars = []
         self.windows = []
@@ -222,14 +224,12 @@ class DMFParser:
             indent=4
         )
 
+    def parse(self):
+        """Creates new json file named `self.output_filename` with parsed cntent from
+        dmf file named `self.input_filename`"""
 
-def main(input_filename, output_filename='byond.json'):
-    """Creates new json file named `output_filename` with parsed cntent from
-    dmf file named `input_filename`"""
-    parser = DMFParser()
-    with open(output_filename, 'w') as file:
-        file.write(parser.to_json(input_filename))
-
+        with open(self.output_filename, 'w') as file:
+            file.write(self.to_json(self.input_filename))
 
 if __name__ == '__main__':
-    main('byond.dmf')
+    DMFParser(input_filename='byond.dmf', output_filename='byond.json').parse()
