@@ -170,6 +170,7 @@ class DMFParser:
         for menubar in self.menubars:
             categories = collections.OrderedDict()
             menus = menubar.pop('controls')
+            groups = set()
             for menu in menus:
                 if 'category' not in menu:
                     menu['type'] = 'MENU'
@@ -191,6 +192,8 @@ class DMFParser:
 
                     if menu.get('name'):
                         menu['type'] = 'ACTION'
+                        if menu.get('group'):
+                            groups.add(menu['group'])
                     else:
                         menu = {'type': 'SEPARATOR'}
 
@@ -198,6 +201,7 @@ class DMFParser:
 
             menubar['type'] = 'MENUBAR'
             menubar['menus'] = list(categories.values())
+            menubar['groups'] = list(groups)
 
         for i, window in enumerate(self.windows):
             controls = window['controls']
