@@ -39,7 +39,7 @@ DELIMITER_MAP = {
 
 class DMFParser:
     """Parser of BYOND interface .dmf format to json."""
-    def __init__(self, input_filename, output_filename='byond.json'):
+    def __init__(self, input_filename: str, output_filename: str = 'byond.json'):
         self.input_filename = input_filename
         self.output_filename = output_filename
         self.macrolists = []
@@ -205,16 +205,23 @@ class DMFParser:
             true_window['controls'] = controls
             self.windows[i] = true_window
 
-    def to_json(self, filename: str):
-        """Generate json file from parsed dmf file named `filename`
+    def parse(self):
+        self.parse_file(self.input_filename)
+        self.post_process()
 
-        Args:
-            filename (str): name of dmf file
+    def save_json(self):
+        """Creates new json file named `self.output_filename` with parsed cntent from
+        dmf file named `self.input_filename`"""
+
+        with open(self.output_filename, 'w') as file:
+            file.write(self.to_json())
+
+    def to_json(self):
+        """Generate json from parsed dmf file
+
         Returns:
             json containing parsed data
         """
-        self.parse_file(filename)
-        self.post_process()
         return json.dumps(
             [
                 self.macrolists,
@@ -224,12 +231,8 @@ class DMFParser:
             indent=4
         )
 
-    def parse(self):
-        """Creates new json file named `self.output_filename` with parsed cntent from
-        dmf file named `self.input_filename`"""
-
-        with open(self.output_filename, 'w') as file:
-            file.write(self.to_json(self.input_filename))
 
 if __name__ == '__main__':
-    DMFParser(input_filename='byond.dmf', output_filename='byond.json').parse()
+    parser = DMFParser(input_filename='byond.dmf', output_filename='byond.json')
+    parser.parse()
+    parser.save_json()
