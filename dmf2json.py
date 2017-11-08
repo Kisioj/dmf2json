@@ -2,7 +2,7 @@
 """Module provides parser to convert BYOND interface .dmf format to json."""
 import collections
 import json
-
+import re
 
 def to_ints(string: str, delimiter: str):
     """Extract values separated by `delimiter` and return them as ints in tuple
@@ -87,6 +87,48 @@ class DMFParser:
         key, value = string.split(' = ')
         return key, value.strip('"')
 
+    @classmethod
+    def _parse_command(cls, value: str):
+        def _parse_statements(statements):
+            result = []
+            for statement in statements:
+                name, value = statement.split('=')
+                short_name = name.split('.')[-1]
+                value = cls._parse_value(short_name, value)
+                result.append({name: value})
+            return result
+
+        found = [word for word in re.findall('([a-z\.\?_=; 0-9,:!]+)', value)]
+        if len(found) <= 1:
+            return value
+
+        command = found[0].strip()
+        args = [el for el in ''.join(found[1:]).split(';') if el]
+
+        new_args = []
+        if command == '.winset':
+
+            for argument in args:
+                if '?' in argument:
+                    conditions, rest = argument.split('?')
+                    if_true, *if_false = rest.split(':')
+
+                    conditions = conditions.split()
+                    if_true = if_true.split()
+                    if_false = if_false[0].split() if if_false else []
+
+                    new_args.append({
+                        'if': _parse_statements(conditions),
+                        'then': _parse_statements(if_true),
+                        'else': _parse_statements(if_false)
+                    })
+                else:
+                    name, value = argument.split('=')
+                    short_name = name.split('.')[-1]
+                    value = cls._parse_value(short_name, value)
+                    new_args.append({name: value})
+        return {command: new_args}
+
     def _parse_category(self, line: str):
         category_type, category_id = self._parse_key_value(line)
 
@@ -113,12 +155,8 @@ class DMFParser:
             self.element['id'] = element_id
         self.category['controls'].append(self.element)
 
-    def _parse_attribute(self, line: str):
-        line = line.lstrip()
-        name, value = self._parse_key_eq_sign_value(line)
-        name = name.replace('-', '_')
-        value = value.replace('-', '_')
-        value = value.strip('\n"')
+    @staticmethod
+    def _parse_value(name: str, value):
         if value in DEFAULT_VALUES_MAP:
             value = DEFAULT_VALUES_MAP[value]
         elif name in DELIMITER_MAP:
@@ -128,6 +166,19 @@ class DMFParser:
             value = int(value)
         elif name == 'saved_params':
             value = value.split(';')
+        return value
+
+    def _parse_attribute(self, line: str):
+        line = line.lstrip()
+        name, value = self._parse_key_eq_sign_value(line)
+        name = name.replace('-', '_')
+        value = value.replace('-', '_')
+        value = value.strip('\n"')
+        if name in ['command', 'on_show', 'on_hide', 'on_tab']:
+            # print(name, value)
+            value = self._parse_command(value)
+        else:
+            value = self._parse_value(name, value)
 
         if name == 'type':
             if value == 'MAIN':
